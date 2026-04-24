@@ -1,0 +1,2127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FXBrainiac — Managed Forex Trading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/splitting/dist/splitting.css">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0A0C12;
+    --card: #111520;
+    --gold: #C9A84C;
+    --gold-dim: rgba(201,168,76,0.15);
+    --blue: #4A90D9;
+    --white: #FFFFFF;
+    --muted: #888888;
+    --border: rgba(255,255,255,0.07);
+    --border-gold: rgba(201,168,76,0.25);
+  }
+
+  html { scroll-behavior: auto; }
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* ─── LOADER ─── */
+  #loader {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 32px;
+  }
+  #loader-brand {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--white);
+    opacity: 0;
+  }
+  #loader-bar-wrap {
+    width: 200px; height: 1px;
+    background: rgba(255,255,255,0.1);
+    position: relative; overflow: hidden;
+  }
+  #loader-bar {
+    position: absolute; top: 0; left: 0;
+    height: 100%; width: 0%;
+    background: var(--gold);
+    box-shadow: 0 0 12px var(--gold);
+    transition: width 0.05s linear;
+  }
+
+  /* ─── CUSTOM CURSOR ─── */
+  #cursor-dot {
+    position: fixed; width: 6px; height: 6px;
+    background: var(--gold); border-radius: 50%;
+    pointer-events: none; z-index: 9998;
+    transform: translate(-50%,-50%);
+    transition: transform 0.1s;
+  }
+  #cursor-ring {
+    position: fixed; width: 36px; height: 36px;
+    border: 1px solid rgba(201,168,76,0.5);
+    border-radius: 50%; pointer-events: none;
+    z-index: 9997; transform: translate(-50%,-50%);
+    transition: width 0.3s, height 0.3s, border-color 0.3s;
+  }
+  #cursor-label {
+    position: fixed; pointer-events: none;
+    z-index: 9996; transform: translate(-50%,-50%);
+    font-family: 'Inter', sans-serif;
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  body:hover #cursor-label { opacity: 1; }
+
+  /* ─── SCROLL PROGRESS ─── */
+  #scroll-progress {
+    position: fixed; right: 0; top: 0;
+    width: 2px; height: 0%;
+    background: var(--gold);
+    box-shadow: 0 0 8px var(--gold), 0 0 20px rgba(201,168,76,0.3);
+    z-index: 9000;
+    transition: height 0.05s linear;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    position: fixed; top: 24px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000; width: 90%;
+    transition: all 0.4s ease;
+  }
+  .nav-pill {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 999px;
+    backdrop-filter: blur(20px);
+    background: rgba(10,12,18,0.6);
+    transition: all 0.4s ease;
+  }
+  header.scrolled .nav-pill {
+    background: rgba(10,12,18,0.92);
+    border-color: rgba(255,255,255,0.1);
+    backdrop-filter: blur(30px);
+  }
+  .nav-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px; font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--white);
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--gold); }
+  .nav-links { display: flex; align-items: center; gap: 8px; }
+  .nav-link {
+    position: relative; padding: 6px 14px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 13px; font-weight: 400;
+    letter-spacing: 0.02em;
+    perspective: 400px;
+    overflow: hidden; height: 22px;
+    display: flex; align-items: center;
+    transition: color 0.3s;
+  }
+  .nav-link .flip-front,
+  .nav-link .flip-back {
+    display: block;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.4s;
+    transform-origin: center bottom;
+    backface-visibility: hidden;
+  }
+  .nav-link .flip-back {
+    position: absolute; left: 14px;
+    top: 50%; transform: translateY(-50%) rotateX(-90deg);
+    color: var(--gold);
+    transform-origin: center top;
+    opacity: 0;
+  }
+  .nav-link:hover .flip-front {
+    transform: rotateX(90deg);
+    opacity: 0;
+  }
+  .nav-link:hover .flip-back {
+    transform: translateY(-50%) rotateX(0deg);
+    opacity: 1;
+  }
+  .nav-cta {
+    padding: 8px 20px;
+    background: var(--gold);
+    color: #0A0C12;
+    border: none; border-radius: 4px;
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: none; text-decoration: none;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .nav-cta:hover { background: #d4b055; box-shadow: 0 0 20px rgba(201,168,76,0.4); }
+
+  /* ─── SECTION LABELS ─── */
+  .section-label {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px;
+  }
+  .section-label-line {
+    width: 40px; height: 1px;
+    background: var(--gold);
+  }
+  .section-label-text {
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  /* ─── BUTTONS ─── */
+  .btn-gold {
+    display: inline-flex; align-items: center; gap: 0;
+    background: var(--gold); color: #0A0C12;
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 0.05em; text-decoration: none;
+    cursor: none; border: none;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+  .btn-gold .btn-text { padding: 14px 24px; }
+  .btn-gold .btn-arrow {
+    padding: 14px 16px;
+    border-left: 1px solid rgba(0,0,0,0.2);
+    transition: background 0.2s;
+  }
+  .btn-gold:hover { box-shadow: 0 0 30px rgba(201,168,76,0.35); background: #d4b055; }
+
+  .btn-outline {
+    display: inline-flex; align-items: center; gap: 0;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: var(--white);
+    font-size: 13px; font-weight: 500;
+    letter-spacing: 0.05em; text-decoration: none;
+    cursor: none;
+    transition: all 0.3s ease;
+  }
+  .btn-outline .btn-text { padding: 14px 24px; }
+  .btn-outline .btn-arrow {
+    padding: 14px 16px;
+    border-left: 1px solid rgba(255,255,255,0.15);
+  }
+  .btn-outline:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    box-shadow: 0 0 20px rgba(201,168,76,0.15);
+  }
+
+  /* ─── SECTION BASE ─── */
+  section { position: relative; }
+  .container { width: 90%; max-width: 1280px; margin: 0 auto; }
+
+  /* ─── HERO ─── */
+  #hero {
+    height: 100vh; min-height: 700px;
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+    justify-content: flex-end;
+    padding-bottom: 80px;
+  }
+  #hero-bg {
+    position: absolute; inset: 0;
+    background: url('images/hero.png') center/cover no-repeat;
+    transform: scale(1.1);
+    will-change: transform;
+    animation: kenBurns 8s ease-out forwards;
+  }
+  @keyframes kenBurns {
+    from { transform: scale(1.1); }
+    to   { transform: scale(1.0); }
+  }
+  #hero-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(10,12,18,0.2) 0%,
+      rgba(10,12,18,0.1) 40%,
+      rgba(10,12,18,0.7) 75%,
+      rgba(10,12,18,0.95) 100%
+    );
+  }
+  .hero-tags {
+    position: absolute; top: 100px; left: 0; right: 0;
+    display: flex; justify-content: space-between;
+    padding: 0 5%;
+    pointer-events: none;
+  }
+  .hero-tag {
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 14px;
+    border-radius: 2px;
+  }
+  .hero-content {
+    position: relative; z-index: 2;
+    padding: 0 5%;
+  }
+  .hero-h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(48px, 7vw, 96px);
+    font-weight: 300;
+    line-height: 1.0;
+    letter-spacing: -0.01em;
+    max-width: 700px;
+    margin-bottom: 40px;
+  }
+  .hero-h1 em { font-style: italic; color: var(--gold); }
+  .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  /* ─── ABOUT / STATS ─── */
+  #about {
+    padding: 140px 0;
+  }
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: start;
+  }
+  .about-left {}
+  .about-h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(36px, 4vw, 56px);
+    font-weight: 400;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin-bottom: 32px;
+  }
+  .about-h2 em { font-style: italic; color: var(--gold); }
+  .about-desc {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.8;
+    margin-bottom: 36px;
+    max-width: 460px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+  }
+  .stat-card {
+    background: var(--card);
+    padding: 36px 32px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .stat-number {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(40px, 4vw, 56px);
+    font-weight: 300;
+    color: var(--white);
+    line-height: 1;
+    display: flex; align-items: baseline; gap: 4px;
+  }
+  .stat-suffix {
+    font-size: 0.5em;
+    color: var(--gold);
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+  }
+  .stat-label {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Slot machine digit */
+  .slot-digit {
+    display: inline-block;
+    overflow: hidden;
+    height: 1em;
+    vertical-align: bottom;
+  }
+  .slot-digit-inner {
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .slot-digit-inner span {
+    display: block;
+    line-height: 1;
+    height: 1em;
+  }
+
+  /* ─── TIERS STICKY STACK ─── */
+  #tiers { position: relative; }
+
+  .tiers-header {
+    padding: 120px 0 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 48px;
+  }
+  .tiers-header-left {}
+  .tiers-h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(36px, 4vw, 52px);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-top: 16px;
+  }
+  .tiers-header-right {
+    flex-shrink: 0;
+    max-width: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 24px;
+  }
+  .tiers-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.75;
+    text-align: right;
+  }
+
+  /* 400vh stack wrapper */
+  #tiers-stack {
+    position: relative;
+    height: 400vh;
+  }
+
+  .tier-sc {
+    position: sticky;
+    top: 80px;
+    height: calc(100vh - 100px);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    overflow: hidden;
+    background: #111520;
+    cursor: none;
+    transition: transform 0.4s ease;
+    will-change: transform;
+  }
+  .tier-sc:hover { transform: scale(0.994); }
+  #tc1 { z-index: 1; }
+  #tc2 { z-index: 2; border-left: 3px solid #C9A84C; }
+  #tc3 { z-index: 3; }
+
+  .tier-sc-img {
+    width: 100%;
+    height: 55%;
+    overflow: hidden;
+    position: relative;
+  }
+  .tier-sc-img img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    will-change: transform;
+    transform-origin: center center;
+  }
+
+  .tier-sc-details {
+    height: 45%;
+    padding: 32px 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 48px;
+    align-content: center;
+    border-top: 1px solid rgba(255,255,255,0.07);
+  }
+  .tier-detail { display: flex; flex-direction: column; gap: 7px; }
+  .tier-detail-label {
+    font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .tier-detail-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(20px, 1.8vw, 26px);
+    font-weight: 500;
+    color: var(--white);
+    line-height: 1.1;
+  }
+  .tier-detail-value.gold {
+    color: var(--gold);
+    letter-spacing: 0.12em;
+    font-size: clamp(14px, 1.2vw, 18px);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .tiers-outro {
+    padding: 56px 0 100px;
+    text-align: center;
+  }
+
+  /* ─── BENEFITS ─── */
+  #benefits { padding: 120px 0; }
+  .benefits-header { margin-bottom: 64px; }
+  .benefits-h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(36px, 4vw, 56px);
+    font-weight: 400; line-height: 1.1;
+    letter-spacing: -0.01em;
+    max-width: 500px;
+  }
+  .benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    background: var(--border);
+  }
+  .benefit-card {
+    background: var(--card);
+    padding: 40px 32px;
+    display: flex; flex-direction: column; gap: 20px;
+    transition: background 0.3s;
+  }
+  .benefit-card:hover { background: #141825; }
+  .benefit-icon {
+    font-size: 28px;
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--gold-dim);
+    border: 1px solid var(--border-gold);
+    border-radius: 4px;
+  }
+  .benefit-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px; font-weight: 500;
+    line-height: 1.2;
+  }
+  .benefit-desc { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+  /* ─── TESTIMONIALS ─── */
+  #testimonials { padding: 120px 0; overflow: hidden; }
+  .test-header { margin-bottom: 64px; }
+  .test-h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(36px, 4vw, 56px);
+    font-weight: 400; line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .test-cols-wrap {
+    position: relative;
+    height: 640px;
+    overflow: hidden;
+  }
+  .test-fade-top,
+  .test-fade-bottom {
+    position: absolute; left: 0; right: 0;
+    height: 120px; z-index: 2; pointer-events: none;
+  }
+  .test-fade-top {
+    top: 0;
+    background: linear-gradient(to bottom, var(--bg), transparent);
+  }
+  .test-fade-bottom {
+    bottom: 0;
+    background: linear-gradient(to top, var(--bg), transparent);
+  }
+  .test-cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    height: 100%;
+    align-items: start;
+  }
+  .test-col { display: flex; flex-direction: column; gap: 16px; }
+  .test-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 28px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .test-card-img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-gold);
+  }
+  .test-stars { color: var(--gold); font-size: 12px; letter-spacing: 2px; }
+  .test-quote {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px; font-style: italic;
+    line-height: 1.5; font-weight: 400;
+    color: rgba(255,255,255,0.9);
+  }
+  .test-author { font-size: 13px; color: var(--muted); }
+  .test-author strong { color: var(--white); display: block; font-size: 14px; margin-bottom: 2px; }
+
+  /* ─── HOW IT WORKS ─── */
+  #how {
+    padding: 120px 0;
+  }
+  .how-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 80px;
+  }
+  .how-h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(36px, 4vw, 52px);
+    font-weight: 400; line-height: 1.1;
+    letter-spacing: -0.01em;
+    max-width: 520px;
+  }
+  .how-inner {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 0 40px;
+  }
+  .how-line-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+  .how-line-track {
+    width: 1px;
+    height: 100%;
+    background: rgba(255,255,255,0.08);
+    position: relative;
+    flex: 1;
+  }
+  .how-line-fill {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 0%;
+    background: linear-gradient(to bottom, var(--gold), rgba(201,168,76,0.3));
+    box-shadow: 0 0 10px rgba(201,168,76,0.4);
+    transition: height 0.05s linear;
+  }
+  .how-steps { display: flex; flex-direction: column; gap: 0; }
+  .how-step {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 0 40px;
+    padding: 40px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .how-step:last-child { border-bottom: none; }
+  .how-step-dot {
+    position: relative;
+    display: flex; align-items: flex-start;
+    justify-content: center;
+    padding-top: 4px;
+  }
+  .how-dot-circle {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid rgba(255,255,255,0.2);
+    position: relative; z-index: 1;
+    transition: border-color 0.4s, background 0.4s;
+  }
+  .how-step.active .how-dot-circle {
+    border-color: var(--gold);
+    background: var(--gold);
+    box-shadow: 0 0 12px rgba(201,168,76,0.6);
+  }
+  .how-step-num {
+    font-size: 11px; letter-spacing: 0.15em;
+    color: var(--gold); text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .how-step-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px; font-weight: 500;
+    margin-bottom: 10px;
+  }
+  .how-step-desc { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+  /* ─── BLOG ─── */
+  #blog { padding: 120px 0; }
+  .blog-header {
+    display: flex; justify-content: space-between;
+    align-items: flex-end; margin-bottom: 48px;
+  }
+  .blog-h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(36px, 4vw, 52px);
+    font-weight: 400; line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .blog-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    background: var(--border);
+    margin-bottom: 48px;
+  }
+  .blog-card {
+    background: var(--card);
+    cursor: none;
+    transition: transform 0.3s ease;
+    overflow: hidden;
+  }
+  .blog-card:hover { transform: scale(0.994); }
+  .blog-img-wrap {
+    width: 100%; aspect-ratio: 16/10;
+    overflow: hidden;
+  }
+  .blog-img-wrap img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.6s ease;
+  }
+  .blog-card:hover .blog-img-wrap img { transform: scale(1.05); }
+  .blog-info { padding: 28px; }
+  .blog-cat {
+    font-size: 10px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gold);
+    margin-bottom: 12px;
+  }
+  .blog-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px; font-weight: 500;
+    line-height: 1.25; margin-bottom: 12px;
+  }
+  .blog-read {
+    font-size: 12px; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .blog-footer { text-align: center; }
+
+  /* ─── FOOTER ─── */
+  footer {
+    background: #080A0F;
+    border-top: 1px solid var(--border);
+    padding: 80px 0 40px;
+  }
+  .footer-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 64px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 56px;
+  }
+  .footer-brand {}
+  .footer-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px; font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--white); margin-bottom: 8px;
+  }
+  .footer-logo span { color: var(--gold); }
+  .footer-tagline {
+    font-size: 13px; color: var(--muted);
+    font-style: italic; margin-bottom: 28px;
+  }
+  .footer-cols {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 40px;
+  }
+  .footer-col-title {
+    font-size: 11px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gold);
+    margin-bottom: 20px;
+  }
+  .footer-col a,
+  .footer-col p {
+    display: block;
+    font-size: 14px; color: var(--muted);
+    text-decoration: none; margin-bottom: 10px;
+    transition: color 0.2s;
+    cursor: none;
+  }
+  .footer-col a:hover { color: var(--white); }
+  .footer-bottom {
+    display: flex; justify-content: space-between;
+    align-items: center;
+  }
+  .footer-disclaimer {
+    font-size: 12px; color: rgba(255,255,255,0.25);
+    max-width: 400px; line-height: 1.6;
+  }
+  .footer-copy {
+    font-size: 12px; color: rgba(255,255,255,0.3);
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── REVEAL ANIMATIONS ─── */
+  .reveal { opacity: 0; transform: translateY(10%); }
+  .reveal-fast { opacity: 0; transform: translateY(6%); }
+
+  /* ─── APPLICATION FORM ─── */
+  #application-form { padding: 120px 0; }
+  .apply-header { text-align: center; margin-bottom: 72px; }
+  .apply-h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(40px, 5vw, 68px);
+    font-weight: 400; line-height: 1.05;
+    letter-spacing: -0.02em; margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .apply-h2 .word { overflow: hidden; display: inline-block; margin-right: 0.2em; }
+  .apply-h2 .char { display: inline-block; }
+  .apply-subtitle {
+    font-size: 15px; color: var(--muted);
+    max-width: 420px; margin: 0 auto; line-height: 1.7;
+  }
+
+  /* Progress bar */
+  .form-progress-wrap {
+    height: 2px; background: rgba(255,255,255,0.06);
+    border-radius: 2px; margin-bottom: 0;
+    overflow: hidden; border-radius: 16px 16px 0 0;
+  }
+  .form-progress-bar {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--gold), #e8c96a);
+    box-shadow: 0 0 10px rgba(201,168,76,0.5);
+    transition: width 0.4s ease;
+    border-radius: 2px;
+  }
+
+  /* Two-column layout */
+  .apply-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* Summary card */
+  .apply-summary {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 36px;
+    position: sticky;
+    top: 100px;
+  }
+  .apply-summary-title {
+    font-size: 11px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gold);
+    margin-bottom: 24px;
+  }
+  .apply-checks { display: flex; flex-direction: column; gap: 14px; margin-bottom: 36px; }
+  .apply-check {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 14px; color: rgba(255,255,255,0.8);
+    opacity: 0;
+  }
+  .apply-check-icon {
+    width: 20px; height: 20px; flex-shrink: 0;
+  }
+  .apply-check-icon circle { stroke-dasharray: 56; stroke-dashoffset: 56; }
+  .apply-check-icon path { stroke-dasharray: 30; stroke-dashoffset: 30; }
+
+  /* Tier table */
+  .apply-tier-table {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .apply-tier-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    transition: background 0.3s, box-shadow 0.3s;
+    border-left: 3px solid transparent;
+  }
+  .apply-tier-row:last-child { border-bottom: none; }
+  .apply-tier-row.header-row {
+    font-size: 10px; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--muted);
+    background: rgba(255,255,255,0.03);
+  }
+  .apply-tier-row.active-tier {
+    background: rgba(201,168,76,0.08);
+    border-left-color: var(--gold);
+    box-shadow: inset 0 0 20px rgba(201,168,76,0.06);
+  }
+  .apply-fee-note {
+    font-size: 12px; color: var(--muted); text-align: center;
+  }
+  .apply-fee-note span { color: var(--gold); }
+
+  /* Form card */
+  .apply-form-card {
+    background: #111520;
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 0 0 16px 16px;
+    padding: 48px;
+  }
+  .apply-form-fields {
+    display: flex; flex-direction: column; gap: 24px;
+  }
+  .field-wrap {
+    position: relative;
+  }
+  .field-label {
+    display: block;
+    font-size: 12px; letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    transform-origin: left center;
+    transition: color 0.3s;
+  }
+  .field-input, .field-select {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 14px 16px;
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .field-input::placeholder { color: rgba(255,255,255,0.25); }
+  .field-select option { background: #111520; color: var(--white); }
+  .field-input:focus, .field-select:focus {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.05);
+    box-shadow: 0 0 20px rgba(201,168,76,0.1);
+  }
+  .field-input.filled, .field-select.filled {
+    border-color: rgba(201,168,76,0.4);
+  }
+  .field-error {
+    font-size: 11px; color: #ff6b6b;
+    margin-top: 6px; display: none;
+    letter-spacing: 0.05em;
+  }
+  .field-wrap.has-error .field-error { display: block; }
+  .field-wrap.has-error .field-input,
+  .field-wrap.has-error .field-select {
+    border-color: #ff6b6b;
+  }
+
+  /* Select arrow */
+  .select-wrap { position: relative; }
+  .select-wrap::after {
+    content: '↓';
+    position: absolute; right: 14px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted); font-size: 12px;
+    pointer-events: none;
+  }
+
+  /* Submit button */
+  .apply-submit {
+    width: 100%; padding: 18px;
+    background: var(--gold);
+    color: #0A0C12; border: none;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px; font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: none;
+    transition: transform 0.2s, filter 0.2s, box-shadow 0.3s;
+    display: flex; align-items: center;
+    justify-content: center; gap: 10px;
+    position: relative; overflow: hidden;
+  }
+  .apply-submit:hover {
+    transform: scale(1.02);
+    filter: brightness(1.1);
+  }
+  .submit-spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,0.3);
+    border-top-color: #0A0C12;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Particle dots on submit complete */
+  .submit-particles {
+    position: absolute; inset: 0;
+    pointer-events: none; overflow: visible;
+  }
+  .sp-dot {
+    position: absolute;
+    width: 5px; height: 5px;
+    background: var(--gold);
+    border-radius: 50%;
+    opacity: 0;
+  }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 1024px) {
+    .about-grid { grid-template-columns: 1fr; gap: 60px; }
+    .benefits-grid { grid-template-columns: repeat(2, 1fr); }
+    .blog-grid { grid-template-columns: 1fr; }
+    .footer-cols { grid-template-columns: repeat(2, 1fr); }
+    .tiers-header { flex-direction: column; align-items: flex-start; gap: 32px; }
+    .tiers-header-right { align-items: flex-start; max-width: 100%; }
+    .tiers-desc { text-align: left; }
+  }
+  @media (max-width: 768px) {
+    .tiers-header { padding: 80px 0 40px; }
+    .tier-sc-details { padding: 20px 24px; gap: 16px 24px; }
+    .how-top { flex-direction: column; align-items: flex-start; gap: 24px; }
+    .nav-links { display: none; }
+    .benefits-grid { grid-template-columns: 1fr; }
+    .test-cols { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .footer-top { flex-direction: column; gap: 48px; }
+    .footer-bottom { flex-direction: column; gap: 16px; text-align: center; }
+    .footer-cols { grid-template-columns: 1fr 1fr; }
+    .apply-grid { grid-template-columns: 1fr; }
+    .apply-summary { position: static; }
+    .apply-form-card { padding: 32px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div id="loader-brand">FXBrainiac</div>
+  <div id="loader-bar-wrap">
+    <div id="loader-bar"></div>
+  </div>
+</div>
+
+<!-- CURSOR -->
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+<div id="cursor-label">TRADE</div>
+
+<!-- SCROLL PROGRESS -->
+<div id="scroll-progress"></div>
+
+<!-- HEADER -->
+<header id="site-header">
+  <div class="nav-pill">
+    <a href="#" class="nav-logo">FX<span>Brainiac</span></a>
+    <nav class="nav-links">
+      <a href="#about" class="nav-link">
+        <span class="flip-front">About</span>
+        <span class="flip-back">About</span>
+      </a>
+      <a href="#tiers" class="nav-link">
+        <span class="flip-front">Accounts</span>
+        <span class="flip-back">Accounts</span>
+      </a>
+      <a href="#how" class="nav-link">
+        <span class="flip-front">How It Works</span>
+        <span class="flip-back">How It Works</span>
+      </a>
+      <a href="#blog" class="nav-link">
+        <span class="flip-front">Insights</span>
+        <span class="flip-back">Insights</span>
+      </a>
+      <a href="#application-form" class="nav-link">
+        <span class="flip-front">Apply Now</span>
+        <span class="flip-back">Apply Now</span>
+      </a>
+    </nav>
+    <a href="#application-form" class="nav-cta">Open Account</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section id="hero">
+  <div id="hero-bg"></div>
+  <div id="hero-overlay"></div>
+  <div class="hero-tags">
+    <div class="hero-tag">Amsterdam, NL</div>
+    <div class="hero-tag">Forex · Managed Accounts</div>
+  </div>
+  <div class="hero-content">
+    <h1 class="hero-h1">The Market<br>Obeys The<br><em>Prepared</em></h1>
+    <div class="hero-btns">
+      <a href="#application-form" class="btn-gold magnetic">
+        <span class="btn-text">Open Account</span>
+        <span class="btn-arrow">→</span>
+      </a>
+      <a href="#testimonials" class="btn-outline magnetic">
+        <span class="btn-text">View Returns</span>
+        <span class="btn-arrow">→</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT + STATS -->
+<section id="about">
+  <div class="container">
+    <div class="about-grid">
+      <div class="about-left">
+        <div class="section-label reveal">
+          <div class="section-label-line"></div>
+          <span class="section-label-text">Who We Are</span>
+        </div>
+        <h2 class="about-h2 reveal">Expert forex management built on<br><em>precision, discipline</em><br>and results.</h2>
+        <p class="about-desc reveal">FXBrainiac deploys a proprietary DSP trading system across major currency pairs. Every position is calculated, every risk is managed, and every client earns predictable monthly returns without lifting a finger.</p>
+        <a href="#how" class="btn-gold magnetic reveal">
+          <span class="btn-text">Learn More</span>
+          <span class="btn-arrow">→</span>
+        </a>
+      </div>
+      <div class="stats-grid reveal">
+        <div class="stat-card">
+          <div class="stat-number">
+            <span class="slot-counter" data-target="2" data-suffix="M+">0</span><span class="stat-suffix">M+</span>
+          </div>
+          <div class="stat-label">Capital Managed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">
+            <span class="slot-counter" data-target="847" data-suffix="+">0</span><span class="stat-suffix">+</span>
+          </div>
+          <div class="stat-label">Active Accounts</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">
+            <span class="slot-counter" data-target="73" data-suffix="%">0</span><span class="stat-suffix">%</span>
+          </div>
+          <div class="stat-label">Win Rate</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">
+            <span class="slot-counter" data-target="5" data-suffix="+">0</span><span class="stat-suffix">+</span>
+          </div>
+          <div class="stat-label">Years Track Record</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ACCOUNT TIERS -->
+<section id="tiers">
+  <div class="container">
+
+    <!-- Section header -->
+    <div class="tiers-header reveal">
+      <div class="tiers-header-left">
+        <div class="section-label">
+          <div class="section-label-line"></div>
+          <span class="section-label-text">Our Accounts</span>
+        </div>
+        <h2 class="tiers-h2">Our Featured Accounts</h2>
+      </div>
+      <div class="tiers-header-right">
+        <p class="tiers-desc">Three tiers of managed forex excellence.<br>Choose the account that fits your ambition.</p>
+        <a href="#" class="btn-outline magnetic">
+          <span class="btn-text">See All Accounts</span>
+          <span class="btn-arrow">→</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- 400vh sticky stack -->
+    <div id="tiers-stack">
+
+      <!-- CARD 1 — STARTER — z-index 1 -->
+      <div class="tier-sc" id="tc1">
+        <div class="tier-sc-img">
+          <img src="images/tier-starter.jpg" alt="Starter Account" id="tsc-img-1">
+        </div>
+        <div class="tier-sc-details">
+          <div class="tier-detail">
+            <span class="tier-detail-label">Minimum Investment</span>
+            <span class="tier-detail-value">$1,000</span>
+          </div>
+          <div class="tier-detail">
+            <span class="tier-detail-label">Setup Fee</span>
+            <span class="tier-detail-value">$200</span>
+          </div>
+          <div class="tier-detail">
+            <span class="tier-detail-label">Profit Split</span>
+            <span class="tier-detail-value">50 / 50</span>
+          </div>
+          <div class="tier-detail">
+            <span class="tier-detail-label">Account Type</span>
+            <span class="tier-detail-value gold">STARTER</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2 — GROWTH — z-index 2 -->
+      <div class="tier-sc" id="tc2">
+        <div class="tier-sc-img">
+          <img src="images/tier-growth.jpg" alt="Growth Account" id="tsc-img-2">
+        </div>
+        <div class="tier-sc-details">
+          <div class="tier-detail">
+            <span class="tier-detail-label">Minimum Investment</span>
+            <span class="tier-detail-value">$5,000</span>
+          </div>
+          <div class="tier-detail">
+            <span class="tier-detail-label">Setup Fee</span>
+            <span class="tier-detail-value">$200</span>
+          </div>
+          <div class="tier-detail">
+            <span class="tier-detail-label">Profit Split</span>
+            <span class="tier-detail-value">60% Client</span>
+          </div>
+          <div class="tier-detail">
+            <span class="tier-detail-label">Account Type</span>
+            <span class="tier-detail-value gold">GROWTH</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3 — ELITE — z-index 3 -->
+      <div class="tier-sc" id="tc3">
+        <div class="tier-sc-img">
+          <img src="images/tier-elite.jpg" alt="Elite Account" id="tsc-img-3">
+        </div>
+        <div class="tier-sc-details">
+          <div class="tier-detail">
+            <span class="tier-detail-label">Minimum Investment</span>
+            <span class="tier-detail-value">$10,000+</span>
+          </div>
+          <div class="tier-detail">
+            <span class="tier-detail-label">Setup Fee</span>
+            <span class="tier-detail-value">$200</span>
+          </div>
+          <div class="tier-detail">
+            <span class="tier-detail-label">Profit Split</span>
+            <span class="tier-detail-value">70% Client</span>
+          </div>
+          <div class="tier-detail">
+            <span class="tier-detail-label">Account Type</span>
+            <span class="tier-detail-value gold">ELITE</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tiers-stack -->
+
+    <div class="tiers-outro">
+      <a href="#" class="btn-gold magnetic reveal">
+        <span class="btn-text">Open Account</span>
+        <span class="btn-arrow">→</span>
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<!-- BENEFITS -->
+<section id="benefits">
+  <div class="container">
+    <div class="benefits-header">
+      <div class="section-label reveal">
+        <div class="section-label-line"></div>
+        <span class="section-label-text">Why FXBrainiac</span>
+      </div>
+      <h2 class="benefits-h2 reveal">Exceptional Returns<br>Every Month<br>Every Time</h2>
+    </div>
+    <div class="benefits-grid">
+      <div class="benefit-card reveal">
+        <div class="benefit-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 2L4 7V16C4 22.627 9.373 28 16 30C22.627 28 28 22.627 28 16V7L16 2Z" stroke="#C9A84C" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M11 16L14.5 19.5L21 13" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="benefit-title">Expert Risk Management</div>
+          <p class="benefit-desc">Every trade is sized with precision. We never risk more than is necessary to achieve your growth targets.</p>
+        </div>
+      </div>
+      <div class="benefit-card reveal">
+        <div class="benefit-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="18" width="5" height="10" rx="1" stroke="#C9A84C" stroke-width="1.5"/>
+            <rect x="13.5" y="12" width="5" height="16" rx="1" stroke="#C9A84C" stroke-width="1.5"/>
+            <rect x="23" y="6" width="5" height="22" rx="1" stroke="#C9A84C" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div>
+          <div class="benefit-title">Transparent Reporting</div>
+          <p class="benefit-desc">Monthly performance reports delivered directly to your inbox. No surprises, full accountability.</p>
+        </div>
+      </div>
+      <div class="benefit-card reveal">
+        <div class="benefit-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polyline points="3,22 11,13 17,18 29,7" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="22,7 29,7 29,14" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="benefit-title">Consistent Monthly Returns</div>
+          <p class="benefit-desc">Our DSP system targets steady monthly gains. Compounding quietly builds extraordinary wealth over time.</p>
+        </div>
+      </div>
+      <div class="benefit-card reveal">
+        <div class="benefit-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="10" r="5" stroke="#C9A84C" stroke-width="1.5"/>
+            <path d="M5 28C5 22.477 10.029 18 16 18C21.971 18 27 22.477 27 28" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="benefit-title">Dedicated Account Manager</div>
+          <p class="benefit-desc">Your own manager answers your questions, updates you on performance and keeps your capital safe.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section id="testimonials">
+  <div class="container">
+    <div class="test-header">
+      <div class="section-label reveal">
+        <div class="section-label-line"></div>
+        <span class="section-label-text">Client Results</span>
+      </div>
+      <h2 class="test-h2 reveal">Results From Real Clients</h2>
+    </div>
+    <div class="test-cols-wrap">
+      <div class="test-fade-top"></div>
+      <div class="test-fade-bottom"></div>
+      <div class="test-cols">
+        <!-- Col 1: +152px -->
+        <div class="test-col" id="test-col-1">
+          <div class="test-card">
+            <img src="images/TESTIMONIALS-1.jpg" alt="James O." class="test-card-img">
+            <div class="test-stars">★★★★★</div>
+            <div class="test-quote">"Best decision I made for my money."</div>
+            <div class="test-author"><strong>James O.</strong>London, UK</div>
+          </div>
+          <div class="test-card">
+            <img src="images/TESTIMONIALS-4.jpg" alt="Yuki T." class="test-card-img">
+            <div class="test-stars">★★★★★</div>
+            <div class="test-quote">"My capital grew 40% in 3 months."</div>
+            <div class="test-author"><strong>Yuki T.</strong>Dubai, UAE</div>
+          </div>
+        </div>
+        <!-- Col 2: -68px -->
+        <div class="test-col" id="test-col-2">
+          <div class="test-card">
+            <img src="images/TESTIMONIALS-2.jpg" alt="Amara K." class="test-card-img">
+            <div class="test-stars">★★★★★</div>
+            <div class="test-quote">"Consistent returns every single month."</div>
+            <div class="test-author"><strong>Amara K.</strong>Lagos, Nigeria</div>
+          </div>
+          <div class="test-card">
+            <img src="images/TESTIMONIALS-5.jpg" alt="Marcus B." class="test-card-img">
+            <div class="test-stars">★★★★★</div>
+            <div class="test-quote">"I trust David with everything."</div>
+            <div class="test-author"><strong>Marcus B.</strong>Amsterdam, NL</div>
+          </div>
+        </div>
+        <!-- Col 3: -136px -->
+        <div class="test-col" id="test-col-3">
+          <div class="test-card">
+            <img src="images/TESTIMONIALS-3.jpg" alt="Ryan M." class="test-card-img">
+            <div class="test-stars">★★★★★</div>
+            <div class="test-quote">"Professional, transparent, trustworthy."</div>
+            <div class="test-author"><strong>Ryan M.</strong>Toronto, Canada</div>
+          </div>
+          <div class="test-card">
+            <img src="images/TESTIMONIALS-6.jpg" alt="Sarah L." class="test-card-img">
+            <div class="test-stars">★★★★★</div>
+            <div class="test-quote">"Finally a trader who actually delivers."</div>
+            <div class="test-author"><strong>Sarah L.</strong>New York, USA</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="container">
+    <div class="how-top">
+      <div>
+        <div class="section-label reveal">
+          <div class="section-label-line"></div>
+          <span class="section-label-text">The Process</span>
+        </div>
+        <h2 class="how-h2 reveal">Follow these simple steps<br>to start earning<br>with FXBrainiac</h2>
+      </div>
+      <a href="#application-form" class="btn-gold magnetic reveal">
+        <span class="btn-text">Open Account</span>
+        <span class="btn-arrow">→</span>
+      </a>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 80px 1fr; gap: 0 40px;">
+      <!-- Timeline line -->
+      <div style="display:flex; flex-direction:column; align-items:center;">
+        <div class="how-line-track" id="how-line-track">
+          <div class="how-line-fill" id="how-line-fill"></div>
+        </div>
+      </div>
+      <!-- Steps -->
+      <div class="how-steps" id="how-steps">
+        <div class="how-step reveal" data-step="0">
+          <div class="how-step-dot">
+            <div class="how-dot-circle"></div>
+          </div>
+          <div class="how-step-content">
+            <div class="how-step-num">Step 01</div>
+            <div class="how-step-title">Sign Up</div>
+            <p class="how-step-desc">Create your FXBrainiac account in minutes. Verify your identity and choose your account tier to get started.</p>
+          </div>
+        </div>
+        <div class="how-step reveal" data-step="1">
+          <div class="how-step-dot">
+            <div class="how-dot-circle"></div>
+          </div>
+          <div class="how-step-content">
+            <div class="how-step-num">Step 02</div>
+            <div class="how-step-title">Fund</div>
+            <p class="how-step-desc">Deposit your capital securely using bank transfer or crypto. Your funds are held safely in your own brokerage account.</p>
+          </div>
+        </div>
+        <div class="how-step reveal" data-step="2">
+          <div class="how-step-dot">
+            <div class="how-dot-circle"></div>
+          </div>
+          <div class="how-step-content">
+            <div class="how-step-num">Step 03</div>
+            <div class="how-step-title">We Trade</div>
+            <p class="how-step-desc">Our DSP system executes high-precision trades daily across major forex pairs. You watch the results, not the screen.</p>
+          </div>
+        </div>
+        <div class="how-step reveal" data-step="3">
+          <div class="how-step-dot">
+            <div class="how-dot-circle"></div>
+          </div>
+          <div class="how-step-content">
+            <div class="how-step-num">Step 04</div>
+            <div class="how-step-title">You Earn</div>
+            <p class="how-step-desc">Monthly profit share paid directly to you. Reinvest or withdraw — the choice is always yours.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BLOG -->
+<section id="blog">
+  <div class="container">
+    <div class="blog-header">
+      <div>
+        <div class="section-label reveal">
+          <div class="section-label-line"></div>
+          <span class="section-label-text">Intelligence</span>
+        </div>
+        <h2 class="blog-h2 reveal">Forex Intelligence</h2>
+      </div>
+    </div>
+    <div class="blog-grid">
+      <div class="blog-card reveal">
+        <div class="blog-img-wrap">
+          <img src="images/blog-one.jpg" alt="Blog One">
+        </div>
+        <div class="blog-info">
+          <div class="blog-cat">Psychology</div>
+          <div class="blog-title">Why Most Forex Traders Lose Money</div>
+          <div class="blog-read">Read Article <span>→</span></div>
+        </div>
+      </div>
+      <div class="blog-card reveal">
+        <div class="blog-img-wrap">
+          <img src="images/blog-two.jpg" alt="Blog Two">
+        </div>
+        <div class="blog-info">
+          <div class="blog-cat">Education</div>
+          <div class="blog-title">What Is A Managed Forex Account?</div>
+          <div class="blog-read">Read Article <span>→</span></div>
+        </div>
+      </div>
+      <div class="blog-card reveal">
+        <div class="blog-img-wrap">
+          <img src="images/blog-three.jpg" alt="Blog Three">
+        </div>
+        <div class="blog-info">
+          <div class="blog-cat">Strategy</div>
+          <div class="blog-title">How DSP System Beats The Market</div>
+          <div class="blog-read">Read Article <span>→</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="blog-footer">
+      <a href="#" class="btn-outline magnetic reveal">
+        <span class="btn-text">See All Insights</span>
+        <span class="btn-arrow">→</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- APPLICATION FORM -->
+<section id="application-form">
+  <div class="container">
+    <div class="apply-header">
+      <div class="section-label reveal" style="justify-content:center">
+        <div class="section-label-line"></div>
+        <span class="section-label-text">Get Started</span>
+        <div class="section-label-line"></div>
+      </div>
+      <h2 class="apply-h2" id="apply-h2">Open Your Managed Account</h2>
+      <p class="apply-subtitle">Join traders who let their money work while they sleep</p>
+    </div>
+
+    <div class="apply-grid">
+      <!-- LEFT — Summary -->
+      <div class="apply-summary" id="apply-summary">
+        <div class="apply-summary-title">What You Get</div>
+        <div class="apply-checks">
+          <div class="apply-check" id="apchk-1">
+            <svg class="apply-check-icon" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="#C9A84C" stroke-width="1.5"/>
+              <path d="M8 12.5l3 3 5-5" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Professional NAS100 trading
+          </div>
+          <div class="apply-check" id="apchk-2">
+            <svg class="apply-check-icon" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="#C9A84C" stroke-width="1.5"/>
+              <path d="M8 12.5l3 3 5-5" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Monthly profit statements
+          </div>
+          <div class="apply-check" id="apchk-3">
+            <svg class="apply-check-icon" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="#C9A84C" stroke-width="1.5"/>
+              <path d="M8 12.5l3 3 5-5" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Full capital protection focus
+          </div>
+        </div>
+        <div class="apply-tier-table">
+          <div class="apply-tier-row header-row">
+            <span>Tier</span><span>Minimum</span><span>Split</span>
+          </div>
+          <div class="apply-tier-row" id="tier-row-starter" data-tier="starter">
+            <span>Starter</span><span>$1,000</span><span>50/50</span>
+          </div>
+          <div class="apply-tier-row" id="tier-row-growth" data-tier="growth">
+            <span>Growth</span><span>$5,000</span><span>60/40</span>
+          </div>
+          <div class="apply-tier-row" id="tier-row-elite" data-tier="elite">
+            <span>Elite</span><span>$10,000+</span><span>70/30</span>
+          </div>
+        </div>
+        <p class="apply-fee-note"><span>$200</span> one-time setup fee</p>
+      </div>
+
+      <!-- RIGHT — Form -->
+      <div>
+        <div class="form-progress-wrap">
+          <div class="form-progress-bar" id="form-progress-bar"></div>
+        </div>
+        <div class="apply-form-card" id="apply-form-card">
+          <form id="apply-form" novalidate>
+            <div class="apply-form-fields">
+
+              <div class="field-wrap">
+                <label class="field-label" for="f-name">Full Name</label>
+                <input class="field-input" id="f-name" name="name" type="text" placeholder="Your full name" autocomplete="off">
+                <div class="field-error">This field is required</div>
+              </div>
+
+              <div class="field-wrap">
+                <label class="field-label" for="f-email">Email Address</label>
+                <input class="field-input" id="f-email" name="email" type="email" placeholder="you@example.com" autocomplete="off">
+                <div class="field-error">Enter a valid email address</div>
+              </div>
+
+              <div class="field-wrap">
+                <label class="field-label" for="f-whatsapp">WhatsApp Number</label>
+                <input class="field-input" id="f-whatsapp" name="whatsapp" type="tel" placeholder="+1 234 567 8900" autocomplete="off">
+                <div class="field-error">This field is required</div>
+              </div>
+
+              <div class="field-wrap">
+                <label class="field-label" for="f-country">Country</label>
+                <input class="field-input" id="f-country" name="country" type="text" placeholder="Your country" autocomplete="off">
+                <div class="field-error">This field is required</div>
+              </div>
+
+              <div class="field-wrap">
+                <label class="field-label" for="f-tier">Account Tier</label>
+                <div class="select-wrap">
+                  <select class="field-select" id="f-tier" name="tier">
+                    <option value="">Select a tier</option>
+                    <option value="starter">Starter ($1,000 minimum)</option>
+                    <option value="growth">Growth ($5,000 minimum)</option>
+                    <option value="elite">Elite ($10,000+ minimum)</option>
+                  </select>
+                </div>
+                <div class="field-error">Please select a tier</div>
+              </div>
+
+              <div class="field-wrap">
+                <label class="field-label" for="f-exp">Trading Experience</label>
+                <div class="select-wrap">
+                  <select class="field-select" id="f-exp" name="experience">
+                    <option value="">Select experience level</option>
+                    <option value="beginner">Complete Beginner</option>
+                    <option value="some">Some Knowledge</option>
+                    <option value="experienced">Experienced Trader</option>
+                  </select>
+                </div>
+                <div class="field-error">Please select your experience</div>
+              </div>
+
+              <div class="field-wrap">
+                <label class="field-label" for="f-source">How did you hear about us?</label>
+                <div class="select-wrap">
+                  <select class="field-select" id="f-source" name="source">
+                    <option value="">Select an option</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="referral">Referral</option>
+                    <option value="facebook">Facebook</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div class="field-error">Please select an option</div>
+              </div>
+
+              <button type="submit" class="apply-submit" id="apply-submit">
+                <span id="submit-text">Submit Application →</span>
+                <div class="submit-spinner" id="submit-spinner"></div>
+                <div class="submit-particles" id="submit-particles"></div>
+              </button>
+
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="footer-logo">FX<span>Brainiac</span></div>
+        <div class="footer-tagline">Your capital. Our expertise.</div>
+        <a href="#application-form" class="btn-gold magnetic">
+          <span class="btn-text">Open Account</span>
+          <span class="btn-arrow">→</span>
+        </a>
+      </div>
+      <div class="footer-cols">
+        <div class="footer-col">
+          <div class="footer-col-title">Pages</div>
+          <a href="#">Home</a>
+          <a href="#about">About</a>
+          <a href="#tiers">Accounts</a>
+          <a href="#blog">Insights</a>
+          <a href="#how">Contact</a>
+        </div>
+        <div class="footer-col">
+          <div class="footer-col-title">Follow</div>
+          <a href="#">Instagram</a>
+          <a href="#">Telegram</a>
+          <a href="#">Facebook</a>
+        </div>
+        <div class="footer-col">
+          <div class="footer-col-title">Location</div>
+          <p>Amsterdam</p>
+          <p>Netherlands</p>
+        </div>
+        <div class="footer-col">
+          <div class="footer-col-title">Contact</div>
+          <a href="mailto:davidemre1991@gmail.com">davidemre1991@gmail.com</a>
+          <a href="tel:07017245432">07017245432</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="footer-disclaimer">Forex trading involves significant risk of loss. Past performance is not indicative of future results. Only invest what you can afford to lose.</p>
+      <div class="footer-copy">© 2026 FXBrainiac. All rights reserved.</div>
+    </div>
+  </div>
+</footer>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1/dist/lenis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/splitting/dist/splitting.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/countup.js@2/dist/countUp.umd.js"></script>
+
+<script>
+(function() {
+  // ─── LOADER ───
+  const loaderBar = document.getElementById('loader-bar');
+  const loaderBrand = document.getElementById('loader-brand');
+  const loader = document.getElementById('loader');
+  let loadPct = 0;
+
+  gsap.to(loaderBrand, { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out', delay: 0.2 });
+
+  const loadInterval = setInterval(() => {
+    loadPct += Math.random() * 18 + 8;
+    if (loadPct >= 100) {
+      loadPct = 100;
+      clearInterval(loadInterval);
+      setTimeout(() => {
+        gsap.to(loader, {
+          opacity: 0, duration: 0.7, ease: 'power2.inOut',
+          onComplete: () => { loader.style.display = 'none'; initAll(); }
+        });
+      }, 400);
+    }
+    loaderBar.style.width = loadPct + '%';
+  }, 80);
+
+  // ─── LENIS SMOOTH SCROLL ───
+  let lenis;
+  function initAll() {
+    lenis = new Lenis({ duration: 1.2, easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+    function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+    requestAnimationFrame(raf);
+    gsap.registerPlugin(ScrollTrigger);
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add(time => lenis.raf(time * 1000));
+    gsap.ticker.lagSmoothing(0);
+
+    initCursor();
+    initScrollProgress();
+    initHeader();
+    initReveal();
+    initCounters();
+    initTiers();
+    initTestimonials();
+    initHowLine();
+    initMagnetic();
+    initHeroEntrance();
+    initApplicationForm();
+  }
+
+  // ─── CUSTOM CURSOR ───
+  function initCursor() {
+    const dot = document.getElementById('cursor-dot');
+    const ring = document.getElementById('cursor-ring');
+    const label = document.getElementById('cursor-label');
+    let mx = 0, my = 0, rx = 0, ry = 0;
+
+    document.addEventListener('mousemove', e => {
+      mx = e.clientX; my = e.clientY;
+      gsap.to(dot, { x: mx, y: my, duration: 0.1 });
+      gsap.to(label, { x: mx + 16, y: my - 16, duration: 0.15 });
+    });
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function animRing() {
+      rx = lerp(rx, mx, 0.12);
+      ry = lerp(ry, my, 0.12);
+      ring.style.left = rx + 'px';
+      ring.style.top = ry + 'px';
+      requestAnimationFrame(animRing);
+    }
+    animRing();
+
+    document.querySelectorAll('a, button, .tier-sc, .blog-card, .btn-gold, .btn-outline').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        gsap.to(ring, { width: 60, height: 60, borderColor: 'rgba(201,168,76,0.8)', duration: 0.3 });
+        gsap.to(dot, { scale: 0, duration: 0.2 });
+      });
+      el.addEventListener('mouseleave', () => {
+        gsap.to(ring, { width: 36, height: 36, borderColor: 'rgba(201,168,76,0.5)', duration: 0.3 });
+        gsap.to(dot, { scale: 1, duration: 0.2 });
+      });
+    });
+  }
+
+  // ─── SCROLL PROGRESS ───
+  function initScrollProgress() {
+    const bar = document.getElementById('scroll-progress');
+    window.addEventListener('scroll', () => {
+      const pct = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+      bar.style.height = pct + '%';
+    }, { passive: true });
+  }
+
+  // ─── HEADER BLUR ───
+  function initHeader() {
+    const header = document.getElementById('site-header');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 60) header.classList.add('scrolled');
+      else header.classList.remove('scrolled');
+    }, { passive: true });
+  }
+
+  // ─── REVEAL ON SCROLL ───
+  function initReveal() {
+    document.querySelectorAll('.reveal, .reveal-fast').forEach(el => {
+      gsap.fromTo(el,
+        { opacity: 0, y: el.classList.contains('reveal-fast') ? '6%' : '10%' },
+        {
+          opacity: 1, y: '0%',
+          duration: 1.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: el,
+            start: 'top 88%',
+            once: true
+          }
+        }
+      );
+    });
+  }
+
+  // ─── SLOT MACHINE COUNTERS ───
+  function initCounters() {
+    document.querySelectorAll('.slot-counter').forEach(el => {
+      const target = parseFloat(el.dataset.target);
+      let started = false;
+
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !started) {
+          started = true;
+          observer.disconnect();
+          animCounter(el, target);
+        }
+      }, { threshold: 0.5 });
+      observer.observe(el);
+    });
+  }
+
+  function animCounter(el, target) {
+    const isDecimal = target % 1 !== 0;
+    const duration = 2000;
+    const start = performance.now();
+
+    function frame(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = eased * target;
+      el.textContent = isDecimal ? current.toFixed(1) : Math.floor(current).toLocaleString();
+      if (progress < 1) requestAnimationFrame(frame);
+      else el.textContent = isDecimal ? target.toFixed(1) : target.toLocaleString();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ─── TESTIMONIAL OFFSET SCROLL ───
+  function initTestimonials() {
+    const col1 = document.getElementById('test-col-1');
+    const col2 = document.getElementById('test-col-2');
+    const col3 = document.getElementById('test-col-3');
+
+    gsap.to(col1, {
+      y: 152,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '#testimonials',
+        start: 'top bottom',
+        end: 'bottom top',
+        scrub: 1.5
+      }
+    });
+    gsap.to(col2, {
+      y: -68,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '#testimonials',
+        start: 'top bottom',
+        end: 'bottom top',
+        scrub: 1.5
+      }
+    });
+    gsap.to(col3, {
+      y: -136,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '#testimonials',
+        start: 'top bottom',
+        end: 'bottom top',
+        scrub: 1.5
+      }
+    });
+  }
+
+  // ─── HOW IT WORKS LINE FILL ───
+  function initHowLine() {
+    const fill = document.getElementById('how-line-fill');
+    const steps = document.querySelectorAll('.how-step');
+    const track = document.getElementById('how-line-track');
+
+    if (!fill || !track) return;
+
+    gsap.to(fill, {
+      height: '100%',
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '#how',
+        start: 'top 60%',
+        end: 'bottom 60%',
+        scrub: 1,
+        onUpdate: (self) => {
+          const pct = self.progress;
+          steps.forEach((step, i) => {
+            const threshold = i / steps.length;
+            if (pct >= threshold) step.classList.add('active');
+            else step.classList.remove('active');
+          });
+        }
+      }
+    });
+  }
+
+  // ─── TIER STICKY STACK ───
+  function initTiers() {
+    const cards = [
+      { card: document.getElementById('tc1'), img: document.getElementById('tsc-img-1') },
+      { card: document.getElementById('tc2'), img: document.getElementById('tsc-img-2') },
+      { card: document.getElementById('tc3'), img: document.getElementById('tsc-img-3') },
+    ];
+
+    cards.forEach(({ card, img }) => {
+      if (!card || !img) return;
+
+      // Image scale parallax while card is pinned
+      gsap.to(img, {
+        scale: 1.08,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: card,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1
+        }
+      });
+    });
+  }
+
+  // ─── MAGNETIC BUTTONS ───
+  function initMagnetic() {
+    document.querySelectorAll('.magnetic').forEach(btn => {
+      btn.addEventListener('mousemove', e => {
+        const rect = btn.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        gsap.to(btn, { x: dx * 0.3, y: dy * 0.3, duration: 0.3, ease: 'power2.out' });
+      });
+      btn.addEventListener('mouseleave', () => {
+        gsap.to(btn, { x: 0, y: 0, duration: 0.5, ease: 'elastic.out(1, 0.5)' });
+      });
+    });
+  }
+
+  // ─── HERO ENTRANCE ───
+  function initHeroEntrance() {
+    const tl = gsap.timeline({ delay: 0.2 });
+    tl.from('.hero-tag', { opacity: 0, y: -20, stagger: 0.15, duration: 0.8, ease: 'power2.out' })
+      .from('.hero-h1', { opacity: 0, y: 40, duration: 1.0, ease: 'power3.out' }, '-=0.4')
+      .from('.hero-btns', { opacity: 0, y: 20, duration: 0.8, ease: 'power2.out' }, '-=0.5');
+  }
+
+  // ─── APPLICATION FORM ───
+  function initApplicationForm() {
+    // H2 char-by-char entrance using Splitting.js
+    const applyH2 = document.getElementById('apply-h2');
+    if (applyH2) {
+      Splitting({ target: applyH2, by: 'chars' });
+      const chars = applyH2.querySelectorAll('.char');
+      gsap.from(chars, {
+        yPercent: 100, opacity: 0, stagger: 0.03, duration: 0.7,
+        ease: 'power3.out',
+        scrollTrigger: { trigger: applyH2, start: 'top 85%', once: true }
+      });
+    }
+
+    // Form card entrance
+    gsap.from('#apply-form-card', {
+      y: 60, opacity: 0, duration: 1, ease: 'power3.out',
+      scrollTrigger: { trigger: '#apply-form-card', start: 'top 80%', once: true }
+    });
+    gsap.from('#apply-summary', {
+      y: 60, opacity: 0, duration: 1, delay: 0.2, ease: 'power3.out',
+      scrollTrigger: { trigger: '#apply-summary', start: 'top 80%', once: true }
+    });
+
+    // Animated checkmarks draw in on scroll
+    const checks = document.querySelectorAll('.apply-check');
+    checks.forEach((check, i) => {
+      const circle = check.querySelector('circle');
+      const path = check.querySelector('path');
+      ScrollTrigger.create({
+        trigger: check,
+        start: 'top 85%',
+        once: true,
+        onEnter: () => {
+          gsap.to(check, { opacity: 1, x: 0, duration: 0.5, delay: i * 0.15, ease: 'power2.out' });
+          gsap.to(circle, { strokeDashoffset: 0, duration: 0.6, delay: i * 0.15 + 0.1, ease: 'power2.out' });
+          gsap.to(path, { strokeDashoffset: 0, duration: 0.4, delay: i * 0.15 + 0.5, ease: 'power2.out' });
+        }
+      });
+      gsap.set(check, { x: -10 });
+    });
+
+    // Progress bar
+    const fields = document.querySelectorAll('.field-input, .field-select');
+    const progressBar = document.getElementById('form-progress-bar');
+    function updateProgress() {
+      let filled = 0;
+      fields.forEach(f => { if (f.value.trim()) filled++; });
+      const pct = Math.round((filled / fields.length) * 100);
+      progressBar.style.width = pct + '%';
+      if (pct === 100) {
+        gsap.to(progressBar, { boxShadow: '0 0 16px rgba(201,168,76,0.9)', duration: 0.4, yoyo: true, repeat: 1 });
+        gsap.to('#apply-submit', {
+          boxShadow: '0 0 30px rgba(201,168,76,0.6)',
+          duration: 0.6, repeat: 2, yoyo: true
+        });
+        spawnParticles();
+      }
+    }
+
+    // Field focus/blur animations
+    fields.forEach(field => {
+      field.addEventListener('focus', () => {
+        gsap.to(field, { borderColor: '#C9A84C', duration: 0.3 });
+      });
+      field.addEventListener('blur', () => {
+        if (field.value.trim()) {
+          field.classList.add('filled');
+          gsap.to(field, { borderColor: 'rgba(201,168,76,0.4)', duration: 0.3 });
+        } else {
+          field.classList.remove('filled');
+          gsap.to(field, { borderColor: 'rgba(255,255,255,0.1)', duration: 0.3 });
+        }
+        updateProgress();
+      });
+      field.addEventListener('input', updateProgress);
+    });
+
+    // Tier select → highlight summary row
+    const tierSelect = document.getElementById('f-tier');
+    const tierRows = document.querySelectorAll('.apply-tier-row[data-tier]');
+    tierSelect.addEventListener('change', () => {
+      const val = tierSelect.value;
+      tierRows.forEach(row => {
+        if (row.dataset.tier === val) {
+          row.classList.add('active-tier');
+          gsap.fromTo(row, { backgroundColor: 'rgba(201,168,76,0)' }, { backgroundColor: 'rgba(201,168,76,0.08)', duration: 0.4 });
+        } else {
+          row.classList.remove('active-tier');
+          gsap.to(row, { backgroundColor: 'rgba(0,0,0,0)', duration: 0.3 });
+        }
+      });
+    });
+
+    // Particle burst when complete
+    function spawnParticles() {
+      const container = document.getElementById('submit-particles');
+      if (!container) return;
+      container.innerHTML = '';
+      for (let i = 0; i < 16; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'sp-dot';
+        const angle = (i / 16) * Math.PI * 2;
+        const dist = 50 + Math.random() * 40;
+        dot.style.left = '50%'; dot.style.top = '50%';
+        container.appendChild(dot);
+        gsap.fromTo(dot,
+          { x: 0, y: 0, opacity: 1, scale: 1 },
+          { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, opacity: 0, scale: 0,
+            duration: 0.8 + Math.random() * 0.4, ease: 'power2.out' }
+        );
+      }
+    }
+
+    // Form submission
+    const form = document.getElementById('apply-form');
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      let valid = true;
+      document.querySelectorAll('.field-wrap').forEach(wrap => {
+        const field = wrap.querySelector('.field-input, .field-select');
+        if (!field) return;
+        const isEmpty = !field.value.trim();
+        const isEmailInvalid = field.type === 'email' && field.value && !/\S+@\S+\.\S+/.test(field.value);
+        if (isEmpty || isEmailInvalid) {
+          valid = false;
+          wrap.classList.add('has-error');
+          gsap.to(field, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.4, ease: 'power1.inOut' });
+        } else {
+          wrap.classList.remove('has-error');
+        }
+      });
+
+      if (!valid) return;
+
+      const btn = document.getElementById('apply-submit');
+      const txt = document.getElementById('submit-text');
+      const spinner = document.getElementById('submit-spinner');
+      txt.textContent = 'Processing...';
+      spinner.style.display = 'block';
+      btn.style.pointerEvents = 'none';
+
+      // Store client details for payment.html
+      localStorage.setItem('client_name', document.getElementById('f-name').value);
+      localStorage.setItem('client_whatsapp', document.getElementById('f-whatsapp').value);
+      localStorage.setItem('client_tier', tierSelect.value);
+
+      setTimeout(() => { window.location.href = 'payment.html'; }, 1200);
+    });
+
+    // External tier-select helper (called by tier CTA buttons)
+    window.selectTierAndApply = function(tier) {
+      const sel = document.getElementById('f-tier');
+      if (sel) {
+        sel.value = tier;
+        sel.dispatchEvent(new Event('change'));
+        sel.classList.add('filled');
+      }
+      const target = document.getElementById('application-form');
+      if (target && lenis) lenis.scrollTo(target, { offset: -80 });
+      else if (target) target.scrollIntoView({ behavior: 'smooth' });
+    };
+  }
+
+})();
+</script>
+</body>
+</html>
